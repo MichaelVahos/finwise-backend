@@ -1,6 +1,6 @@
 package com.finwise.backend.config;
 
-import com.finwise.backend.Security.JwtUtil;
+import com.finwise.backend.security.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

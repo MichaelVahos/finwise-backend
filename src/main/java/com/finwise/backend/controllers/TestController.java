@@ -10,6 +10,6 @@ public class TestController {
 
     @GetMapping
     public ResponseEntity<String> testEndpoint() {
-        return ResponseEntity.ok("✅ Acceso autorizado con token JWT");
+        return ResponseEntity.ok("Acceso autorizado con token JWT");
     }
 }

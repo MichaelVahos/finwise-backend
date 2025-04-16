@@ -1,12 +1,10 @@
 package com.finwise.backend.controllers;
 
-import com.finwise.backend.Security.JwtUtil;
+import com.finwise.backend.security.JwtUtil;
 import com.finwise.backend.dto.LoginRequest;
 import com.finwise.backend.dto.LoginResponse;
 import com.finwise.backend.dto.RegistroRequest;
-import com.finwise.backend.services.AuthService;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.finwise.backend.models.Usuario;
 import com.finwise.backend.services.UsuarioService;

@@ -1,4 +1,4 @@
-package com.finwise.backend.Security;
+package com.finwise.backend.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
