@@ -37,4 +37,10 @@ public class UsuarioService {
     public Optional<Usuario> obtenerUsuarioPorEmail(String email) {
         return usuarioRepository.findByEmail(email);
     }
+
+    public boolean verificarPassword(String passwordPlano, String passwordCifrado) {
+        return passwordEncoder.matches(passwordPlano, passwordCifrado);
+    }
+
+
 }
