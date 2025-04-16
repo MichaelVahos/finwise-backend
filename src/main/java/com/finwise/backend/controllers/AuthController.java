@@ -1,8 +1,11 @@
 package com.finwise.backend.controllers;
 
+import com.finwise.backend.Security.JwtUtil;
 import com.finwise.backend.dto.LoginRequest;
+import com.finwise.backend.dto.LoginResponse;
 import com.finwise.backend.dto.RegistroRequest;
 import com.finwise.backend.services.AuthService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.finwise.backend.models.Usuario;
@@ -10,15 +13,22 @@ import com.finwise.backend.services.UsuarioService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
+
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "http://localhost:4200") // para permitir peticiones desde Angular
 public class AuthController {
 
     private final UsuarioService usuarioService;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    public AuthController(UsuarioService usuarioService) {
+
+    public AuthController(UsuarioService usuarioService, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.usuarioService = usuarioService;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
     }
 
     @PostMapping("/register")
@@ -33,23 +43,23 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody LoginRequest request) {
-        // Buscar el usuario por username
-        Usuario usuario = usuarioService.obtenerUsuarioPorUsername(request.getUsername())
-                .orElse(null);
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        Optional<Usuario> usuarioOpt = usuarioService.obtenerUsuarioPorUsername(request.getUsername());
 
-        if (usuario == null) {
+        if (usuarioOpt.isEmpty()) {
             return ResponseEntity.status(401).body("Usuario no encontrado");
         }
 
-        // Verificar la contraseña
-        boolean passwordOk = usuarioService.verificarPassword(request.getPassword(), usuario.getPassword());
+        Usuario usuario = usuarioOpt.get();
 
-        if (!passwordOk) {
+        if (!passwordEncoder.matches(request.getPassword(), usuario.getPassword())) {
             return ResponseEntity.status(401).body("Contraseña incorrecta");
         }
 
-        return ResponseEntity.ok("Inicio de sesión exitoso");
+        // Generar token
+        String token = jwtUtil.generateToken(usuario.getUsername());
+
+        return ResponseEntity.ok(new LoginResponse(token));
     }
 
 }
