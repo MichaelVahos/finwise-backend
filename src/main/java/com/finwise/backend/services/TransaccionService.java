@@ -90,4 +90,14 @@ public class TransaccionService {
         transaccionRepository.delete(t);
         return true;
     }
+
+    public List<Transaccion> listarPorRango(
+            String username,
+            LocalDate desde,
+            LocalDate hasta
+    ) {
+        Usuario u = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        return transaccionRepository.findAllByUsuarioAndFechaBetween(u, desde, hasta);
+    }
 }

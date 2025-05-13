@@ -1,5 +1,6 @@
 package com.finwise.backend.services;
 
+import com.finwise.backend.enums.Rol;
 import com.finwise.backend.models.Usuario;
 import com.finwise.backend.repositories.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,10 +24,17 @@ public class UsuarioService {
 
     // Registrar un nuevo usuario
     public Usuario registrarUsuario(Usuario usuario) {
+        // Si el rol no fue especificado, se asigna USER por defecto
+        if (usuario.getRol() == null) {
+            usuario.setRol(Rol.USER);
+        }
+
         // Cifrar la contraseña antes de guardarla
         usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
+
         return usuarioRepository.save(usuario);
     }
+
 
     // Buscar usuario por username
     public Optional<Usuario> obtenerUsuarioPorUsername(String username) {
@@ -40,6 +48,11 @@ public class UsuarioService {
 
     public boolean verificarPassword(String passwordPlano, String passwordCifrado) {
         return passwordEncoder.matches(passwordPlano, passwordCifrado);
+    }
+
+    // Guardar (crear o actualizar) usuario
+    public Usuario guardar(Usuario usuario) {
+        return usuarioRepository.save(usuario);
     }
 
 

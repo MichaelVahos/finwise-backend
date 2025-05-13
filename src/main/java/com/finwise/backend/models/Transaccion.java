@@ -1,5 +1,6 @@
 package com.finwise.backend.models;
 
+import com.finwise.backend.enums.TipoTransaccion;
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDate;
@@ -26,17 +27,27 @@ public class Transaccion {
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TipoTransaccion tipo;
+
+    @Column(nullable = false)
+    private String categoria;
+
+
     // Constructor sin argumentos (requerido por JPA)
     public Transaccion() {}
 
     // Constructor con todos los campos
-    public Transaccion(Long id, LocalDate fecha, String descripcion, Double monto, Usuario usuario) {
+    public Transaccion(Long id, LocalDate fecha, String descripcion, Double monto, Usuario usuario, TipoTransaccion tipo) {
         this.id = id;
         this.fecha = fecha;
         this.descripcion = descripcion;
         this.monto = monto;
         this.usuario = usuario;
+        this.tipo = tipo;
     }
+
 
     // Getters y setters
 
@@ -79,4 +90,20 @@ public class Transaccion {
     public void setUsuario(Usuario usuario) {
         this.usuario = usuario;
     }
+
+    public TipoTransaccion getTipo() {
+        return tipo;
+    }
+
+    public void setTipo(TipoTransaccion tipo) {
+        this.tipo = tipo;
+    }
+    public String getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
+    }
+
 }
