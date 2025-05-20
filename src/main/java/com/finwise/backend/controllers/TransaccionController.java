@@ -269,15 +269,19 @@ public class TransaccionController {
 
         List<Transaccion> transacciones = transaccionRepository.findAllByUsuario(usuarioOpt.get());
 
-        // Agrupamos
+        // Agrupamos por tipo + categoría
         Map<String, Double> resumen = transacciones.stream()
                 .collect(Collectors.groupingBy(
-                        Transaccion::getCategoria,
+                        t -> t.getTipo().name() + "||" + t.getCategoria(),
                         Collectors.summingDouble(Transaccion::getMonto)
                 ));
 
-        List<CategoriaResumen> resultado = resumen.entrySet().stream()
-                .map(entry -> new CategoriaResumen(entry.getKey(), entry.getValue()))
+        // Convertimos el resumen a DTOs
+        List<CategoriaTipoResumen> resultado = resumen.entrySet().stream()
+                .map(entry -> {
+                    String[] parts = entry.getKey().split("\\|\\|");
+                    return new CategoriaTipoResumen(parts[0], parts[1], entry.getValue());
+                })
                 .toList();
 
         return ResponseEntity.ok(resultado);
@@ -324,7 +328,8 @@ public class TransaccionController {
 
         transaccionRepository.save(tx);
 
-        return ResponseEntity.ok("Transacción actualizada");
+        return ResponseEntity.ok(Map.of("mensaje", "Transacción actualizada"));
+
     }
 
 
@@ -364,6 +369,103 @@ public class TransaccionController {
         transaccionRepository.delete(tx);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/resumen/actual")
+    public ResponseEntity<?> resumenActual(HttpServletRequest request) {
+        String token = extraerToken(request);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401).body("Token inválido");
+        }
+
+        String username = jwtUtil.getUsernameFromToken(token);
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByUsername(username);
+        if (usuarioOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("Usuario no encontrado");
+        }
+
+        LocalDate hoy = LocalDate.now();
+        LocalDate desde = hoy.withDayOfMonth(1);
+        LocalDate hasta = hoy.withDayOfMonth(hoy.lengthOfMonth());
+
+        List<Transaccion> transacciones = transaccionRepository
+                .findAllByUsuarioAndFechaBetween(usuarioOpt.get(), desde, hasta);
+
+        double ingresos = transacciones.stream()
+                .filter(t -> t.getTipo() == TipoTransaccion.INGRESO)
+                .mapToDouble(Transaccion::getMonto)
+                .sum();
+
+        double gastos = transacciones.stream()
+                .filter(t -> t.getTipo() == TipoTransaccion.GASTO)
+                .mapToDouble(Transaccion::getMonto)
+                .sum();
+
+        return ResponseEntity.ok(Map.of(
+                "ingresos", ingresos,
+                "gastos", gastos
+        ));
+    }
+
+
+    @GetMapping("/categoria-top")
+    public ResponseEntity<?> categoriaTop(HttpServletRequest request) {
+        String token = extraerToken(request);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401).body("Token inválido");
+        }
+
+        String username = jwtUtil.getUsernameFromToken(token);
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByUsername(username);
+        if (usuarioOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("Usuario no encontrado");
+        }
+
+        LocalDate hoy = LocalDate.now();
+        LocalDate desde = hoy.withDayOfMonth(1);
+        LocalDate hasta = hoy.withDayOfMonth(hoy.lengthOfMonth());
+
+        List<Transaccion> transacciones = transaccionRepository
+                .findAllByUsuarioAndFechaBetween(usuarioOpt.get(), desde, hasta).stream()
+                .filter(t -> t.getTipo() == TipoTransaccion.GASTO)
+                .toList();
+
+        if (transacciones.isEmpty()) {
+            return ResponseEntity.ok(Map.of("categoria", "Sin datos", "total", 0));
+        }
+
+        Map<String, Double> agrupadas = transacciones.stream()
+                .collect(Collectors.groupingBy(
+                        Transaccion::getCategoria,
+                        Collectors.summingDouble(Transaccion::getMonto)
+                ));
+
+        var top = agrupadas.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(e -> Map.of("categoria", e.getKey(), "total", e.getValue()))
+                .orElse(Map.of("categoria", "Sin datos", "total", 0));
+
+        return ResponseEntity.ok(top);
+    }
+
+    @GetMapping("/ultimas")
+    public ResponseEntity<?> ultimasTransacciones(HttpServletRequest request) {
+        String token = extraerToken(request);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401).body("Token inválido");
+        }
+
+        String username = jwtUtil.getUsernameFromToken(token);
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByUsername(username);
+        if (usuarioOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("Usuario no encontrado");
+        }
+
+        List<Transaccion> ultimas = transaccionRepository
+                .findTop3ByUsuarioOrderByFechaDesc(usuarioOpt.get());
+
+        return ResponseEntity.ok(ultimas);
+    }
+
 
     /** Extrae “Bearer xxxxx” → “xxxxx” */
     private String extraerToken(HttpServletRequest request) {

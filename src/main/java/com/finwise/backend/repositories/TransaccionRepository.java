@@ -15,4 +15,6 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
             LocalDate desde,
             LocalDate hasta
     );
+    List<Transaccion> findTop3ByUsuarioOrderByFechaDesc(Usuario usuario);
+
 }
