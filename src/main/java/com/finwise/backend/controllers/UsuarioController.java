@@ -1,12 +1,18 @@
 package com.finwise.backend.controllers;
 
+import com.finwise.backend.dto.UsuarioResumenDTO;
+import com.finwise.backend.enums.Rol;
 import com.finwise.backend.models.Usuario;
+import com.finwise.backend.repositories.UsuarioRepository;
 import com.finwise.backend.security.JwtUtil;
 import com.finwise.backend.services.UsuarioService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -18,11 +24,13 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final UsuarioRepository usuarioRepository;
 
-    public UsuarioController(UsuarioService usuarioService, JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
+    public UsuarioController(UsuarioService usuarioService, JwtUtil jwtUtil, PasswordEncoder passwordEncoder, UsuarioRepository usuarioRepository) {
         this.usuarioService = usuarioService;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = passwordEncoder;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @GetMapping("/perfil")
@@ -66,6 +74,34 @@ public class UsuarioController {
         return ResponseEntity.ok(Map.of("mensaje", "Contraseña actualizada correctamente"));
 
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/usuarios")
+    public ResponseEntity<?> listarUsuarios(HttpServletRequest request) {
+        String token = extraerToken(request);
+        if (token == null || !jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(401).body("Token inválido");
+        }
+
+        String username = jwtUtil.getUsernameFromToken(token);
+        Optional<Usuario> adminOpt = usuarioRepository.findByUsername(username);
+        if (adminOpt.isEmpty() || adminOpt.get().getRol() != Rol.ADMIN) {
+            return ResponseEntity.status(403).body("Acceso denegado");
+        }
+
+        List<UsuarioResumenDTO> lista = usuarioRepository.findAll().stream()
+                .map(u -> new UsuarioResumenDTO(u.getId(), u.getUsername(), u.getEmail(), u.getRol()))
+                .toList();
+
+        return ResponseEntity.ok(lista);
+    }
+
+    /** Extrae “Bearer xxxxx” → “xxxxx” */
+    private String extraerToken(HttpServletRequest request) {
+        String h = request.getHeader("Authorization");
+        return (h != null && h.startsWith("Bearer ")) ? h.substring(7) : null;
+    }
+
 
 
 }
